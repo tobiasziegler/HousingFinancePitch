@@ -1,26 +1,95 @@
 ---
-title       : 
-subtitle    : 
-author      : 
+title       : Australian Housing Finance Explorer
+subtitle    : App and presentation developed for Coursera's Developing Data Products course project
+author      : David Mallard
 job         : 
+logo        : tobby.jpg
 framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
 highlighter : highlight.js  # {highlight.js, prettify, highlight}
 hitheme     : tomorrow      # 
 widgets     : []            # {mathjax, quiz, bootstrap}
+ext_widgets : {rCharts: libraries/nvd3}
 mode        : selfcontained # {standalone, draft}
 knit        : slidify::knit2slides
 ---
 
-## Read-And-Delete
+<!-- Limit image width and height -->
+<style type='text/css'>
+img {
+    max-height: 560px;
+    max-width: 964px;
+}
+</style>
 
-1. Edit YAML front matter
-2. Write using R Markdown
-3. Use an empty line followed by three dashes to separate slides!
+## What is Housing Finance data?
+
+* [5609.0 Housing Finance](http://www.abs.gov.au/ausstats/abs@.nsf/mf/5609.0): Australian Bureau of Statistics dataset based on records from financial institutions and regulators.
+* Provides monthly records of loan commitments related to housing.
+* Changes over time indicate trends in economic activity and in the housing sector.
+* Records (except in earlier years) provide a breakdown of lending:
+  * by borrower type (owner-occupier vs property investor)
+  * loan purpose (construction of new housing, purchase of existing house, refinancing, etc.)
+
+*Exploring the Housing Finance dataset allows us to draw conclusions about trends in housing activity and the changing nature of the housing market, and to consider the implications for housing policy.*
 
 --- .class #id 
 
-## Slide 2
+## Screenshot of the App
 
+![Screenshot of the web app](assets/img/shinyapps_io.png)
 
+---
 
+## Sample Interactive Chart: Proportional Rise in Investment Properties, 1992-2015 (Trend Data)
 
+```{r echo=FALSE, results='asis', comment=NA, message=FALSE}
+# Code based on Shiny app project at https://github.com/tobiasziegler/HousingFinance
+library(rCharts)
+library(readr)
+library(dplyr)
+library(lubridate)
+
+# Load the housing finance dataset
+housing_finance <- readr::read_csv(file.path("data", "housing-finance.csv")) %>%
+  mutate(
+    data_month = as.Date(data_month),
+    series_id = factor(series_id),
+    data_series = factor(data_series),
+    borrower_type = factor(borrower_type),
+    purpose = factor(purpose)
+  )
+
+hf_subset_aggregate <- housing_finance %>%
+  filter(
+    data_series == "Trend",
+    year(data_month) >= 1992,
+    year(data_month) <= 2015
+  ) %>%
+  group_by(borrower_type, data_month) %>%
+  summarise(commitments = sum(commitments, na.rm = TRUE))
+hf_subset_aggregate <- hf_subset_aggregate %>%
+  group_by(data_month, borrower_type) %>%
+  summarise(commitments = commitments) %>%
+  mutate(prop = commitments / sum(commitments))
+housing_finance_by_borrower <- nPlot(
+  prop ~ data_month,
+  group = "borrower_type",
+  data = hf_subset_aggregate,
+  type = "stackedAreaChart"
+)
+housing_finance_by_borrower$xAxis(tickFormat = "#!function(d) {return d3.time.format('%Y-%m')(new Date( d * 86400000 ));}!#")
+housing_finance_by_borrower$chart(forceY = c(0, 1))
+housing_finance_by_borrower$print()
+```
+
+(NB: The chart may take some time to load due to the amount of data involved. Please be patient.)
+
+---
+
+## Would You Like To Know More?
+
+* [Explore the data on ShinyApps](https://tobiasziegler.shinyapps.io/HousingFinance)
+* [View and fork the code on GitHub](https://github.com/tobiasziegler/HousingFinance)
+* [Find the data products and reports at the Australian Bureau of Statistics](http://www.abs.gov.au/ausstats/abs@.nsf/mf/5609.0)
+
+*Thanks for your interest!*
